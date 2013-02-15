@@ -7,6 +7,10 @@
 
 #include <Arduino.h>
 
+#define LW_OFF 0
+#define LW_ON 1
+#define LW_MOOD 2
+
 extern void lw_setup();
 
 extern void lw_rx_wait();
@@ -16,4 +20,6 @@ extern boolean lw_have_message();
 extern boolean lw_get_message(byte* buf, byte* len);
 
 extern void lw_send(byte* msg);
+
+extern void lw_cmd(byte level, byte channel, byte cmd, byte* id);
 

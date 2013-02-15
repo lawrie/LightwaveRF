@@ -7,6 +7,9 @@
 
 #include <LightwaveRF.h>
 
+static byte lw_nibble[] = {0xF6,0xEE,0xED,0xEB,0xDE,0xDD,0xDB,0xBE,
+                     0xBD,0xBB,0xB7,0x7E,0x7D,0x7B,0x77,0x6F};
+
 static int lw_rx_pin = 2;
 static int lw_tx_pin = 3;
 
@@ -198,4 +201,20 @@ void lw_send(byte* msg) {
     delayMicroseconds(10000);
   } 
   sei();  
+}
+
+/**
+  Send a LightwaveRF command
+**/
+void lw_cmd(byte level, byte channel, byte cmd, byte* id) {
+  byte msg[10];
+  
+  msg[0] = lw_nibble[level >> 4];
+  msg[1] = lw_nibble[level & 0xF];
+  msg[2] = lw_nibble[channel];
+  msg[3] = lw_nibble[cmd];
+  for(int i=0;i<6;i++) {
+    msg[4+i] = id[i];
+  }
+  lw_send(msg);
 }

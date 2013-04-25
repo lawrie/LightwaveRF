@@ -198,7 +198,7 @@ void lw_send(byte* msg) {
     
     // send end bit
     lw_send_bit(HIGH);
-    delayMicroseconds(10000);
+    delayMicroseconds(10250);
   } 
   sei();  
 }

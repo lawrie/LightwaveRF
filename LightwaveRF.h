@@ -23,3 +23,4 @@ extern void lw_send(byte* msg);
 
 extern void lw_cmd(byte level, byte channel, byte cmd, byte* id);
 
+extern void lw_get_error_stats(long *inv);

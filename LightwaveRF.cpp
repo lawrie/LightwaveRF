@@ -3,7 +3,7 @@
 // LightwaveRF 434MHz interface for Arduino
 // 
 // Author: Lawrie Griffiths (lawrie.griffiths@ntlworld.com)
-// Copyright (C) 2012 Lawrie Griffiths
+// Copyright (C) 2013 Lawrie Griffiths
 
 #include <LightwaveRF.h>
 
@@ -20,18 +20,21 @@ static byte lw_msg[lw_msg_len]; // the message received
 static byte lw_byte; // The current byte
 static byte lw_num_bits = 0; // number of bits in the current byte
 static unsigned long lw_prev; // time of previous pulse
-static boolean lw_p_started = false; // packet started
+static volatile boolean lw_p_started = false; // packet started
 static boolean lw_b_started = false; // byte started
 static byte lw_num_bytes = 0; // number of bytes received 
 
-static const int lw_bit_delay = 640;
+static const int lw_bit_delay = 560;
 static const byte lw_repeats = 12; // Number of repeats of message sent
+
+static long lw_num_invalid_packets[4];
 
 /**
   Pin change interrupt routine that identifies 1 and 0 LightwaveRF bits
   and constructs a message when a valid packet of data is received.
 **/
 void lw_process_bits() { 
+  // Don't process bits when a message is already ready
   if (lw_got_message) return;
   
   byte v = digitalRead(lw_rx_pin); // the current value
@@ -62,28 +65,15 @@ void lw_process_bits() {
         // a valid 1 bit
         lw_byte = (lw_byte << 1) | 1;
         if (++lw_num_bits == 8) { // Test for complete byte
-          if (lw_num_bytes == 0 && lw_byte != 0xf6) { // Check first byte of message
-            // Does not start with f6, could have missed first bit
-            if (lw_byte == 0xdb) {
-              // simulate getting the correct f6 byte
-              lw_b_started = true;
-              lw_msg[lw_num_bytes++] = 0xf6;
-              lw_byte = 0;
-              lw_num_bits = 0;
-            } else {
-              // not a valid packet after all
-              lw_p_started = false;
-            }
-          } else {
-            // Add the byte to the message
-            lw_b_started = false;
-            lw_msg[lw_num_bytes++] = lw_byte;
-          }
+		  // Add the byte to the message
+		  lw_b_started = false;
+		  lw_msg[lw_num_bytes++] = lw_byte;
         }
       }
     } else {
       // Too short for a zero bit
       lw_p_started = false;
+	  if (lw_num_bytes > 0) lw_num_invalid_packets[0]++;
     }
   } else if (dur > 20 && dur < 28) {
     // potential 0 bit
@@ -92,35 +82,38 @@ void lw_process_bits() {
       if (!lw_b_started) {
         // Zero bit where byte start bit expected
         lw_p_started = false;
+		if (lw_num_bytes > 0) lw_num_invalid_packets[1]++;
       } else if (lw_p_started) {
-        // Valid 0 bitnumB
+        // Valid 0 bit
         lw_byte = (lw_byte << 1);
         if (++lw_num_bits == 8) {
-          if (lw_num_bytes == 0 && lw_byte != 0xf6) {
-            // Not a valid message after all
-            lw_p_started = false;
-          } else {
-            // Add the byte to the message
-            lw_msg[lw_num_bytes++] = lw_byte;
-            lw_b_started = false;
-          }
+          // Add the byte to the message
+          lw_msg[lw_num_bytes++] = lw_byte;
+          lw_b_started = false;
         }
       }
     } else {
       // Too long for a 1 bit
       lw_p_started = false;
+	  if (lw_num_bytes > 0) lw_num_invalid_packets[2]++;
     }
   } else {
      // Not a valid length for a bit
-     lw_p_started = false;
+	 if (lw_p_started && lw_num_bytes > 0) lw_num_invalid_packets[3]++;
+	 lw_p_started = false;
   }
   
   // See if we have the whole message
-  if (lw_num_bytes == lw_msg_len) {
+  if (lw_p_started && lw_num_bytes == lw_msg_len) {
     lw_got_message = true;
     lw_p_started = false;
   }
 }
+
+void lw_get_error_stats(long* inv) {
+  for(int i=0;i<4;i++) inv[i] = lw_num_invalid_packets[i];
+}
+
 
 /**
   Wait for a message to arrive
@@ -144,16 +137,17 @@ boolean lw_have_message()
 boolean lw_get_message(byte  *buf, byte *len) {
   if (!lw_got_message) return false;
   
-  byte rxLen = lw_msg_len;
-  if (*len < rxLen) *len = rxLen;
+  // Buffer length must be 10
+  if (*len != lw_msg_len) return false;
   
-  memcpy(buf,lw_msg,*len); 
+  memcpy(buf,lw_msg,lw_msg_len);
+
   lw_got_message = false;
   return true;
 }
 
 /**
-  Set things up to receive and transmit LighWaveRF 434Mhz messages
+  Set things up to receive and transmit LightwaveRF 434Mhz messages
 **/
 void lw_setup() {
   pinMode(lw_rx_pin,INPUT);
@@ -162,7 +156,7 @@ void lw_setup() {
 }
   
 /**
-  Transmit a 1 or 0 bit to a LightwaveRF device
+Transmit a 1 or 0 bit to a LightwaveRF device
 **/
 void lw_send_bit(byte b) {
   delayMicroseconds(25);
@@ -170,6 +164,10 @@ void lw_send_bit(byte b) {
   delayMicroseconds(lw_bit_delay/2);
   digitalWrite(lw_tx_pin,LOW);
   delayMicroseconds(lw_bit_delay/2);
+  
+  if (b == LOW) {
+    delayMicroseconds(300);
+  }
 }
 
 /**
@@ -179,7 +177,6 @@ void lw_tx_byte(byte b) {
   lw_send_bit(HIGH);
 
   for (byte mask = B10000000; mask; mask >>= 1) {
-    //Serial.println(b & mask);
     lw_send_bit(b & mask);
   }
 }
@@ -198,6 +195,8 @@ void lw_send(byte* msg) {
     
     // send end bit
     lw_send_bit(HIGH);
+	
+	// Delay between repeats
     delayMicroseconds(10250);
   } 
   sei();  
@@ -213,6 +212,7 @@ void lw_cmd(byte level, byte channel, byte cmd, byte* id) {
   msg[1] = lw_nibble[level & 0xF];
   msg[2] = lw_nibble[channel];
   msg[3] = lw_nibble[cmd];
+  
   for(int i=0;i<6;i++) {
     msg[4+i] = id[i];
   }

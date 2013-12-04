@@ -20,11 +20,3 @@ void loop() {
   level++;
   if (level > 31) level = 0;
 }
-
-void printMsg(byte *msg, byte len) {
-  for(int i=0;i<len;i++) {
-    Serial.print(msg[i],HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-}

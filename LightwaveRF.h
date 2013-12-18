@@ -11,6 +11,12 @@
 #define LW_ON 1
 #define LW_MOOD 2
 
+extern void lw_tx_setup(int tx_pin);
+
+extern void lw_rx_setup(int rx_pin, int interrupt);
+
+extern boolean lw_setup(int tx_pin, int rx_pin, int interrupt);
+
 extern void lw_setup();
 
 extern void lw_rx_wait();

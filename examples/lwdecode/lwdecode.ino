@@ -27,7 +27,7 @@ void decodeMsg(byte *msg, byte len) {
   Serial.println(findNibble(msg[2]));
   Serial.print("Command = ");
   byte cmd = findNibble(msg[3]);
-  Serial.println((cmd == 0 ? "Off" : (cmd == 1 ? " On" : (cmd == 2 ? "Mood" : "Unknown"))));
+  Serial.println((cmd == 0 ? "Off" : (cmd == 1 ? " On" : (cmd == 2 ? "Mood" : String(cmd)))));
   Serial.print("Id = ");
   
   for(int i=0;i<6;i++) {

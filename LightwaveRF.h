@@ -10,6 +10,7 @@
 #define LW_OFF 0
 #define LW_ON 1
 #define LW_MOOD 2
+#define LW_LOCK 4
 
 extern void lw_tx_setup(int tx_pin);
 

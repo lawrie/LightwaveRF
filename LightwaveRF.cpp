@@ -215,7 +215,7 @@ void lw_tx_byte(byte b) {
 **/
 void lw_send(byte* msg) {
   cli();
-  for(byte j=0;j<lw_repeats;j++) {
+  for(byte j=lw_repeats;j>0;j--) {
     // send a start bit
     lw_send_bit(HIGH);
     

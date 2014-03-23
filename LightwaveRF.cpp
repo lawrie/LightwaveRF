@@ -10,8 +10,8 @@
 static byte lw_nibble[] = {0xF6,0xEE,0xED,0xEB,0xDE,0xDD,0xDB,0xBE,
                      0xBD,0xBB,0xB7,0x7E,0x7D,0x7B,0x77,0x6F};
 
-static int lw_rx_pin;
-static int lw_tx_pin;
+static byte lw_rx_pin;
+static byte lw_tx_pin;
 
 static volatile boolean lw_got_message = false; // true when full message received
 static const byte lw_msg_len = 10; // the expected length of the message
@@ -149,7 +149,7 @@ boolean lw_get_message(byte  *buf, byte *len) {
 /**
   Set things up to transmit LightwaveRF 434Mhz messages using the pin specified
 **/
-void lw_tx_setup(int tx_pin) {
+void lw_tx_setup(byte tx_pin) {
   lw_tx_pin = tx_pin;
   pinMode(lw_tx_pin,OUTPUT);
 }
@@ -157,7 +157,7 @@ void lw_tx_setup(int tx_pin) {
 /**
   Set things up to receive LightwaveRF 434Mhz messages using the values specified
 **/
-void lw_rx_setup(int rx_pin, int interrupt) {
+void lw_rx_setup(byte rx_pin, byte interrupt) {
   lw_rx_pin = rx_pin;
   pinMode(lw_rx_pin,INPUT);
   attachInterrupt(interrupt,lw_process_bits,CHANGE);
@@ -166,7 +166,7 @@ void lw_rx_setup(int rx_pin, int interrupt) {
 /**
   Set things up to transmit and receive LightwaveRF 434Mhz messages using the values specified
 **/
-boolean lw_setup(int tx_pin, int rx_pin, int interrupt) {
+boolean lw_setup(byte tx_pin, byte rx_pin, byte interrupt) {
   if(tx_pin == rx_pin) {
     return false;
   }
@@ -242,7 +242,7 @@ void lw_cmd(byte level, byte channel, byte cmd, byte* id) {
   msg[2] = lw_nibble[channel];
   msg[3] = lw_nibble[cmd];
   
-  for(int i=0;i<6;i++) {
+  for(byte i=0;i<6;i++) {
     msg[4+i] = id[i];
   }
   lw_send(msg);
